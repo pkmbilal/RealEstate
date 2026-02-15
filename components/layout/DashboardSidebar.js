@@ -1,37 +1,57 @@
 import Link from "next/link";
-import { LayoutDashboard, Building2, Heart, MessageSquareText } from "lucide-react";
+import { redirect } from "next/navigation";
+import { supabaseServer } from "@/lib/supabase/server";
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/listings", label: "My Listings", icon: Building2 },
-  { href: "/dashboard/leads", label: "Leads", icon: MessageSquareText },
-  { href: "/dashboard/favorites", label: "Favorites", icon: Heart },
-];
+import { LayoutDashboard, Building2, Inbox, Heart } from "lucide-react";
 
-export default function DashboardSidebar() {
+function NavItem({ href, icon: Icon, label }) {
   return (
-    <aside className="hidden border-r bg-background md:block">
-      <div className="p-4">
-        <div className="mb-4 flex items-center gap-2 text-lg font-semibold">
-          <span className="text-primary">MyProperty</span>
-        </div>
+    <Link
+      href={href}
+      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted"
+    >
+      <Icon className="h-4 w-4 text-primary" />
+      <span>{label}</span>
+    </Link>
+  );
+}
 
-        <nav className="grid gap-1">
-          {nav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <Icon className="h-4 w-4 text-primary" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+export default async function DashboardSidebar() {
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name")
+    .eq("id", user.id)
+    .single();
+
+  const role = profile?.role || "user";
+  const isAgent = role === "agent" || role === "admin";
+
+  return (
+    <aside className="border-r bg-background p-4">
+      <div className="mb-4">
+        <div className="text-sm text-muted-foreground">Signed in</div>
+        <div className="font-medium">
+          {profile?.full_name || user.email}
+        </div>
+        <div className="text-xs text-muted-foreground">Role: {role}</div>
       </div>
+
+      <nav className="grid gap-1">
+        <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+        <NavItem href="/dashboard/favorites" icon={Heart} label="Favorites" />
+
+        {/* ✅ Only show to agent/admin */}
+        {isAgent ? (
+          <>
+            <NavItem href="/dashboard/listings" icon={Building2} label="My Listings" />
+            <NavItem href="/dashboard/leads" icon={Inbox} label="Leads" />
+          </>
+        ) : null}
+      </nav>
     </aside>
   );
 }

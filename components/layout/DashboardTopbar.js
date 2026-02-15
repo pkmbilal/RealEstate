@@ -3,13 +3,20 @@
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-// We'll connect supabase logout later
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function DashboardTopbar() {
   const router = useRouter();
 
   async function logout() {
-    // placeholder until auth wired
+    const supabase = supabaseBrowser();
+
+    await supabase.auth.signOut();
+
+    // Refresh server components / layouts that depend on auth cookies
+    router.refresh();
+
+    // Go to home (or /auth/login if you prefer)
     router.push("/");
   }
 

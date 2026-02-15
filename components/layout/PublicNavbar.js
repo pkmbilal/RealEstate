@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Container from "./Container";
 import { Button } from "@/components/ui/button";
-import { Home, LogIn, Search, UserPlus } from "lucide-react";
+import { Home, Search } from "lucide-react";
+import UserMenu from "@/components/auth/UserMenu";
 
 export default function PublicNavbar() {
   return (
@@ -20,19 +21,8 @@ export default function PublicNavbar() {
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="gap-2">
-            <Link href="/auth/login">
-              <LogIn className="h-4 w-4" />
-              Login
-            </Link>
-          </Button>
-
-          <Button asChild className="hidden sm:inline-flex gap-2">
-            <Link href="/auth/signup">
-              <UserPlus className="h-4 w-4" />
-              Sign up
-            </Link>
-          </Button>
+          {/* ✅ Auto switch: Login/Signup OR Avatar menu */}
+          <UserMenu />
         </div>
       </Container>
     </header>

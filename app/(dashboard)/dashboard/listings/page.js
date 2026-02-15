@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { requireAgentOrAdmin } from "@/lib/auth/requireRole";
+
 
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import EmptyState from "@/components/common/EmptyState";
 import { Plus } from "lucide-react";
 
 export default async function ListingsPage() {
+  await requireAgentOrAdmin();
   const supabase = await supabaseServer();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
@@ -22,7 +23,7 @@ export default async function ListingsPage() {
     .single();
 
   if (profile?.role !== "agent" && profile?.role !== "admin") {
-    redirect("/dashboard"); // simple gating for MVP
+    redirect("/dashboard");
   }
 
   const { data: listings, error } = await supabase
@@ -51,12 +52,19 @@ export default async function ListingsPage() {
       ) : null}
 
       {!listings?.length ? (
-        <EmptyState
-          title="No listings yet"
-          description="Create your first listing to start receiving leads."
-          actionLabel="Create listing"
-          onAction={() => {}}
-        />
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-lg font-semibold">No listings yet</div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Create your first listing to start receiving leads.
+            </p>
+            <div className="mt-4">
+              <Button asChild>
+                <Link href="/dashboard/listings/new">Create listing</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-3">
           {listings.map((p) => (

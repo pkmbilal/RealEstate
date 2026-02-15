@@ -19,7 +19,6 @@ export default function NewListingPage() {
   const supabase = supabaseBrowser();
 
   const [loading, setLoading] = useState(false);
-
   const [form, setForm] = useState({
     purpose: "rent",
     property_type: "apartment",
@@ -76,10 +75,7 @@ export default function NewListingPage() {
 
     setLoading(false);
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) return toast.error(error.message);
 
     toast.success("Listing created (draft).");
     router.push(`/dashboard/listings/${data.id}/edit`);
@@ -96,9 +92,7 @@ export default function NewListingPage() {
               <div className="space-y-2">
                 <Label>Purpose</Label>
                 <Select value={form.purpose} onValueChange={(v) => setField("purpose", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select purpose" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="rent">Rent</SelectItem>
                     <SelectItem value="sale">Sale</SelectItem>
@@ -109,9 +103,7 @@ export default function NewListingPage() {
               <div className="space-y-2">
                 <Label>Property type</Label>
                 <Select value={form.property_type} onValueChange={(v) => setField("property_type", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="apartment">Apartment</SelectItem>
                     <SelectItem value="villa">Villa</SelectItem>
@@ -137,7 +129,6 @@ export default function NewListingPage() {
                 <Label>Price (SAR)</Label>
                 <Input value={form.price} onChange={(e) => setField("price", e.target.value)} required inputMode="numeric" />
               </div>
-
               <div className="space-y-2">
                 <Label>Area (sqm)</Label>
                 <Input value={form.area_sqm} onChange={(e) => setField("area_sqm", e.target.value)} inputMode="numeric" />
@@ -149,7 +140,6 @@ export default function NewListingPage() {
                 <Label>Bedrooms</Label>
                 <Input value={form.bedrooms} onChange={(e) => setField("bedrooms", e.target.value)} inputMode="numeric" />
               </div>
-
               <div className="space-y-2">
                 <Label>Bathrooms</Label>
                 <Input value={form.bathrooms} onChange={(e) => setField("bathrooms", e.target.value)} inputMode="numeric" />
@@ -161,7 +151,6 @@ export default function NewListingPage() {
                 <Label>City</Label>
                 <Input value={form.city} onChange={(e) => setField("city", e.target.value)} />
               </div>
-
               <div className="space-y-2">
                 <Label>District</Label>
                 <Input value={form.district} onChange={(e) => setField("district", e.target.value)} />

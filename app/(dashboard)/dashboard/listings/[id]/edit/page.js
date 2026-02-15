@@ -21,7 +21,6 @@ export default function EditListingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-
   const [item, setItem] = useState(null);
 
   async function load() {
@@ -34,10 +33,7 @@ export default function EditListingPage() {
 
     setLoading(false);
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) return toast.error(error.message);
     setItem(data);
   }
 
@@ -65,10 +61,7 @@ export default function EditListingPage() {
       district: item.district,
     };
 
-    const { error } = await supabase
-      .from("properties")
-      .update(payload)
-      .eq("id", id);
+    const { error } = await supabase.from("properties").update(payload).eq("id", id);
 
     setSaving(false);
 
@@ -76,28 +69,27 @@ export default function EditListingPage() {
     toast.success("Saved.");
   }
 
-  async function setPublish(nextStatus) {
+  async function togglePublish() {
+    const next = item.status === "published" ? "draft" : "published";
     setPublishing(true);
 
     const payload =
-      nextStatus === "published"
+      next === "published"
         ? { status: "published", published_at: new Date().toISOString() }
         : { status: "draft", published_at: null };
 
-    const { error } = await supabase
-      .from("properties")
-      .update(payload)
-      .eq("id", id);
+    const { error } = await supabase.from("properties").update(payload).eq("id", id);
 
     setPublishing(false);
 
     if (error) return toast.error(error.message);
-    toast.success(nextStatus === "published" ? "Published!" : "Unpublished.");
+
+    toast.success(next === "published" ? "Published!" : "Unpublished.");
     load();
   }
 
   if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
-  if (!item) return <div className="text-sm text-muted-foreground">Not found</div>;
+  if (!item) return <div className="text-sm text-muted-foreground">Not found.</div>;
 
   const isPublished = item.status === "published";
 
@@ -113,7 +105,7 @@ export default function EditListingPage() {
             </Badge>
             <Button
               variant={isPublished ? "outline" : "default"}
-              onClick={() => setPublish(isPublished ? "draft" : "published")}
+              onClick={togglePublish}
               disabled={publishing}
             >
               {publishing ? "Updating..." : isPublished ? "Unpublish" : "Publish"}
