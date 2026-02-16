@@ -19,11 +19,50 @@ export default async function PropertyDetailPage({ params }) {
 
   if (error || !p) return notFound();
 
+  const { data: media } = await supabase
+    .from("property_media")
+    .select("path, sort_order, created_at")
+    .eq("property_id", p.id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const bucket = "property-media";
+  const images = (media || []).map((m) => {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(m.path);
+    return data.publicUrl;
+  });
+
   return (
     <div style={{ padding: 24 }}>
       <Link href="/search" style={{ textDecoration: "none" }}>
         ← Back to search
       </Link>
+
+      {images?.length ? (
+        <div
+          style={{
+            marginTop: 16,
+            display: "grid",
+            gap: 10,
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          }}
+        >
+          {images.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt="Property"
+              style={{
+                width: "100%",
+                height: 160,
+                objectFit: "cover",
+                borderRadius: 10,
+                border: "1px solid #e5e7eb",
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 12 }}>
         {p.title}

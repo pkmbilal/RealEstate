@@ -1,5 +1,7 @@
 "use client";
 
+import PropertyMediaManager from "@/components/property/PropertyMediaManager";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -172,6 +174,7 @@ export default function EditListingPage() {
               </Button>
             </div>
           </form>
+          <PropertyMediaManager propertyId={id} />
         </CardContent>
       </Card>
     </div>
