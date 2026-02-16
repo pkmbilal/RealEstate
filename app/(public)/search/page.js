@@ -61,8 +61,7 @@ export default async function SearchPage({ searchParams }) {
   } else if (sort === "price_desc") {
     q = q.order("price", { ascending: false });
   } else {
-    // newest default
-    q = q.order("published_at", { ascending: false });
+    q = q.order("published_at", { ascending: false }); // newest default
   }
 
   // pagination range
@@ -73,15 +72,16 @@ export default async function SearchPage({ searchParams }) {
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
 
-  // ---------- thumbnails for THIS PAGE ----------
+  // ---------- thumbnails for THIS PAGE (✅ cover image = lowest sort_order) ----------
   const ids = (listings || []).map((p) => p.id);
   let thumbById = {};
 
   if (ids.length) {
     const { data: media } = await supabase
       .from("property_media")
-      .select("property_id, path, created_at")
+      .select("property_id, path, sort_order, created_at")
       .in("property_id", ids)
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
 
     const bucket = "property-media";
@@ -117,15 +117,28 @@ export default async function SearchPage({ searchParams }) {
       {/* ✅ Filters + Sort */}
       <div className="mb-4 rounded-xl border bg-background p-3">
         <form className="grid gap-3 md:grid-cols-7" action="/search">
-          <select name="purpose" defaultValue={purpose} className="h-10 rounded-lg border px-3">
+          <select
+            name="purpose"
+            defaultValue={purpose}
+            className="h-10 rounded-lg border px-3"
+          >
             <option value="">Purpose</option>
             <option value="rent">Rent</option>
             <option value="sale">Sale</option>
           </select>
 
-          <input name="city" defaultValue={city} placeholder="City" className="h-10 rounded-lg border px-3" />
+          <input
+            name="city"
+            defaultValue={city}
+            placeholder="City"
+            className="h-10 rounded-lg border px-3"
+          />
 
-          <select name="type" defaultValue={type} className="h-10 rounded-lg border px-3">
+          <select
+            name="type"
+            defaultValue={type}
+            className="h-10 rounded-lg border px-3"
+          >
             <option value="">Type</option>
             <option value="apartment">Apartment</option>
             <option value="villa">Villa</option>
@@ -133,10 +146,27 @@ export default async function SearchPage({ searchParams }) {
             <option value="office">Office</option>
           </select>
 
-          <input name="min" defaultValue={sp?.min || ""} placeholder="Min price" inputMode="numeric" className="h-10 rounded-lg border px-3" />
-          <input name="max" defaultValue={sp?.max || ""} placeholder="Max price" inputMode="numeric" className="h-10 rounded-lg border px-3" />
+          <input
+            name="min"
+            defaultValue={sp?.min || ""}
+            placeholder="Min price"
+            inputMode="numeric"
+            className="h-10 rounded-lg border px-3"
+          />
 
-          <select name="beds" defaultValue={sp?.beds || ""} className="h-10 rounded-lg border px-3">
+          <input
+            name="max"
+            defaultValue={sp?.max || ""}
+            placeholder="Max price"
+            inputMode="numeric"
+            className="h-10 rounded-lg border px-3"
+          />
+
+          <select
+            name="beds"
+            defaultValue={sp?.beds || ""}
+            className="h-10 rounded-lg border px-3"
+          >
             <option value="">Beds</option>
             <option value="0">Studio+</option>
             <option value="1">1+</option>
@@ -146,8 +176,11 @@ export default async function SearchPage({ searchParams }) {
             <option value="5">5+</option>
           </select>
 
-          {/* ✅ Sort */}
-          <select name="sort" defaultValue={sort} className="h-10 rounded-lg border px-3">
+          <select
+            name="sort"
+            defaultValue={sort}
+            className="h-10 rounded-lg border px-3"
+          >
             <option value="newest">Newest</option>
             <option value="price_asc">Price (Low → High)</option>
             <option value="price_desc">Price (High → Low)</option>
@@ -175,11 +208,15 @@ export default async function SearchPage({ searchParams }) {
             <span className="font-medium text-foreground">{totalPages}</span>
           </span>
           <span>•</span>
-          <Link className="underline" href="/search">Clear</Link>
+          <Link className="underline" href="/search">
+            Clear
+          </Link>
         </div>
       </div>
 
-      {error ? <pre className="text-red-600">{JSON.stringify(error, null, 2)}</pre> : null}
+      {error ? (
+        <pre className="text-red-600">{JSON.stringify(error, null, 2)}</pre>
+      ) : null}
 
       {!listings?.length ? (
         <p>No matching listings.</p>
@@ -234,7 +271,10 @@ export default async function SearchPage({ searchParams }) {
           {/* Pagination */}
           <div className="mt-6 flex items-center justify-between">
             {hasPrev ? (
-              <Link href={buildUrl(page - 1)} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">
+              <Link
+                href={buildUrl(page - 1)}
+                className="rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+              >
                 ← Previous
               </Link>
             ) : (
@@ -242,7 +282,10 @@ export default async function SearchPage({ searchParams }) {
             )}
 
             {hasNext ? (
-              <Link href={buildUrl(page + 1)} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">
+              <Link
+                href={buildUrl(page + 1)}
+                className="rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+              >
                 Next →
               </Link>
             ) : (

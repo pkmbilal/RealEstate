@@ -22,16 +22,12 @@ export default async function ListingsPage() {
   await requireAgentOrAdmin();
 
   const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  // ✅ Select all useful fields (edit this list if you add more columns later)
   const { data: listings, error } = await supabase
     .from("properties")
-    .select(
-      `
+    .select(`
       id,
       slug,
       purpose,
@@ -49,20 +45,20 @@ export default async function ListingsPage() {
       published_at,
       created_at,
       updated_at
-    `,
-    )
+    `)
     .eq("listed_by_user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // ✅ Thumbnails (same as search)
+  // ✅ cover thumbnails (sort_order ASC)
   const ids = (listings || []).map((p) => p.id);
   let thumbById = {};
 
   if (ids.length) {
     const { data: media } = await supabase
       .from("property_media")
-      .select("property_id, path, created_at")
+      .select("property_id, path, sort_order, created_at")
       .in("property_id", ids)
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
 
     const bucket = "property-media";
@@ -114,18 +110,17 @@ export default async function ListingsPage() {
                 className="rounded-xl border bg-background overflow-hidden hover:bg-muted/30 transition"
               >
                 <div className="grid gap-3 md:grid-cols-[260px_1fr]">
-                  {/* Image */}
+                  {/* ✅ cover image */}
                   {thumbById[p.id] ? (
                     <img
                       src={thumbById[p.id]}
-                      alt="Thumb"
+                      alt="Cover"
                       className="w-full h-48 object-cover md:h-full md:min-h-[220px]"
                     />
                   ) : (
                     <div className="w-full h-48 bg-muted md:h-full md:min-h-[220px]" />
                   )}
 
-                  {/* Details */}
                   <div className="p-4 flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -134,24 +129,14 @@ export default async function ListingsPage() {
                           {p.currency} {p.price} • {p.city || "—"}{" "}
                           {p.district ? `(${p.district})` : ""}
                         </div>
-
-                        {/* Description */}
-                        {p.description ? (
-                          <div className="text-sm text-muted-foreground line-clamp-2">
-                            {p.description}
-                          </div>
-                        ) : null}
                       </div>
 
-                      <Badge
-                        variant="secondary"
-                        className="border text-primary shrink-0"
-                      >
+                      <Badge variant="secondary" className="border text-primary shrink-0">
                         {p.status}
                       </Badge>
                     </div>
 
-                    {/* ✅ “All fields” block */}
+                    {/* fields */}
                     <div className="grid gap-2 md:grid-cols-2">
                       <Field label="Purpose" value={p.purpose} />
                       <Field label="Type" value={p.property_type} />
@@ -160,9 +145,15 @@ export default async function ListingsPage() {
                       <Field label="Area (sqm)" value={p.area_sqm} />
                       <Field label="City" value={p.city} />
                       <Field label="District" value={p.district} />
+                      <Field label="Slug" value={p.slug} />
                     </div>
 
-                    {/* Actions */}
+                    {p.description ? (
+                      <div className="text-sm text-muted-foreground line-clamp-2">
+                        {p.description}
+                      </div>
+                    ) : null}
+
                     <div className="mt-auto flex flex-wrap gap-2">
                       <Button asChild variant="outline" className="gap-2">
                         <Link href={`/dashboard/listings/${p.id}/edit`}>

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Container from "@/components/layout/Container";
 import { supabaseServer } from "@/lib/supabase/server";
 import LeadForm from "@/components/property/LeadForm";
 import FavoriteButton from "@/components/property/FavoriteButton";
+import PropertyGallery from "@/components/property/PropertyGallery";
 
 export default async function PropertyDetailPage({ params }) {
   const supabase = await supabaseServer();
 
-  // ✅ Next.js new behavior: params is a Promise
+  // ✅ Next.js new behavior: params can be a Promise
   const { slug } = await params;
 
   const { data: p, error } = await supabase
@@ -19,6 +21,7 @@ export default async function PropertyDetailPage({ params }) {
 
   if (error || !p) return notFound();
 
+  // ✅ Cover-first gallery (sort_order ASC)
   const { data: media } = await supabase
     .from("property_media")
     .select("path, sort_order, created_at")
@@ -33,79 +36,57 @@ export default async function PropertyDetailPage({ params }) {
   });
 
   return (
-    <div style={{ padding: 24 }}>
-      <Link href="/search" style={{ textDecoration: "none" }}>
+    <Container className="py-6">
+      <Link href="/search" className="text-sm text-muted-foreground hover:underline">
         ← Back to search
       </Link>
 
-      {images?.length ? (
-        <div
-          style={{
-            marginTop: 16,
-            display: "grid",
-            gap: 10,
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          }}
-        >
-          {images.map((url) => (
-            <img
-              key={url}
-              src={url}
-              alt="Property"
-              style={{
-                width: "100%",
-                height: 160,
-                objectFit: "cover",
-                borderRadius: 10,
-                border: "1px solid #e5e7eb",
-              }}
-            />
-          ))}
+      {/* ✅ Interactive Gallery */}
+      <PropertyGallery images={images} />
+
+      {/* ✅ Title + meta */}
+      <div className="mt-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+            {p.title}
+          </h1>
+
+          <div className="mt-2 text-sm text-muted-foreground">
+            {p.city || "—"}
+            {p.district ? ` • ${p.district}` : ""} • {p.purpose} • {p.property_type}
+          </div>
         </div>
-      ) : null}
 
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 12 }}>
-        {p.title}
-      </h1>
-
-      <div style={{ marginTop: 8, opacity: 0.8 }}>
-        {p.city || "—"} {p.district ? `• ${p.district}` : ""} • {p.purpose} •{" "}
-        {p.property_type}
+        <div className="shrink-0">
+          <FavoriteButton propertyId={p.id} />
+        </div>
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 20, fontWeight: 700 }}>
+      {/* ✅ Price */}
+      <div className="mt-3 text-xl font-bold">
         {p.currency} {p.price}
       </div>
 
-      <div style={{ marginTop: 12, opacity: 0.85 }}>
-        {p.bedrooms ?? "—"} bd • {p.bathrooms ?? "—"} ba • {p.area_sqm ?? "—"}{" "}
-        sqm
+      {/* ✅ Specs */}
+      <div className="mt-2 text-sm text-muted-foreground">
+        {p.bedrooms ?? "—"} Bedrooms • {p.bathrooms ?? "—"} Bathrooms •{" "}
+        {p.area_sqm ?? "—"} sqm
       </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-        }}
-      >
-        <div style={{ fontSize: 20, fontWeight: 700 }}>
-          {p.currency} {p.price}
-        </div>
-
-        <FavoriteButton propertyId={p.id} />
-      </div>
-
+      {/* ✅ Description */}
       {p.description ? (
-        <div style={{ marginTop: 18, lineHeight: 1.6 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Description</h3>
-          <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>
+        <div className="mt-6 rounded-xl border bg-background p-4">
+          <div className="font-semibold mb-2">Description</div>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-6">
+            {p.description}
+          </p>
         </div>
       ) : null}
 
       {/* ✅ Leads (login required) */}
-      <LeadForm propertyId={p.id} />
-    </div>
+      <div className="mt-6">
+        <LeadForm propertyId={p.id} />
+      </div>
+    </Container>
   );
 }
