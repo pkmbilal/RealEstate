@@ -15,7 +15,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { LayoutDashboard, Building2, Heart, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Building2,
+  Heart,
+  LogOut,
+  User,
+  Inbox,
+} from "lucide-react";
 
 export default function UserMenu() {
   const supabase = supabaseBrowser();
@@ -24,27 +31,35 @@ export default function UserMenu() {
 
   const [user, setUser] = useState(null);
   const [profileName, setProfileName] = useState("");
+  const [role, setRole] = useState("user"); // user | agent | admin
 
-  // Load session + listen for changes
   useEffect(() => {
     let ignore = false;
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (ignore) return;
+
       setUser(user || null);
 
       if (user) {
-        // optional: fetch profile full_name (safe with your RLS)
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, role")
           .eq("id", user.id)
           .single();
 
-        if (!ignore) setProfileName(profile?.full_name || "");
+        if (ignore) return;
+
+        setProfileName(profile?.full_name || "");
+        setRole(profile?.role || "user");
       } else {
-        if (!ignore) setProfileName("");
+        if (!ignore) {
+          setProfileName("");
+          setRole("user");
+        }
       }
     }
 
@@ -63,7 +78,7 @@ export default function UserMenu() {
 
   async function logout() {
     await supabase.auth.signOut();
-    router.refresh(); // refresh server components that depend on auth
+    router.refresh();
     if (pathname.startsWith("/dashboard")) router.push("/");
   }
 
@@ -96,6 +111,8 @@ export default function UserMenu() {
     .map((w) => w[0].toUpperCase())
     .join("");
 
+  const isAgentOrAdmin = role === "agent" || role === "admin";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="outline-none">
@@ -107,9 +124,7 @@ export default function UserMenu() {
           </Avatar>
           <div className="hidden sm:block text-left">
             <div className="text-sm font-medium leading-4">{name}</div>
-            <div className="text-xs text-muted-foreground leading-4">
-              {email}
-            </div>
+            <div className="text-xs text-muted-foreground leading-4">{email}</div>
           </div>
         </div>
       </DropdownMenuTrigger>
@@ -126,9 +141,9 @@ export default function UserMenu() {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link href="/dashboard/listings" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            My Listings
+          <Link href="/dashboard/profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Profile
           </Link>
         </DropdownMenuItem>
 
@@ -138,6 +153,27 @@ export default function UserMenu() {
             Favorites
           </Link>
         </DropdownMenuItem>
+
+        {/* ✅ Only agent/admin */}
+        {isAgentOrAdmin ? (
+          <>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/listings" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                My Listings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/leads" className="flex items-center gap-2">
+                <Inbox className="h-4 w-4" />
+                Leads
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
 
         <DropdownMenuSeparator />
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 
-import { LayoutDashboard, Building2, Inbox, Heart } from "lucide-react";
+import { LayoutDashboard, Building2, Inbox, Heart, User } from "lucide-react";
 
 function NavItem({ href, icon: Icon, label }) {
   return (
@@ -42,7 +42,9 @@ export default async function DashboardSidebar() {
 
       <nav className="grid gap-1">
         <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+        <NavItem href="/dashboard/profile" icon={User} label="Profile" />
         <NavItem href="/dashboard/favorites" icon={Heart} label="Favorites" />
+
 
         {/* ✅ Only show to agent/admin */}
         {isAgent ? (
