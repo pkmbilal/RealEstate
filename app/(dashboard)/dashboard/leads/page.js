@@ -7,8 +7,7 @@ import { requireAgentOrAdmin } from "@/lib/auth/requireRole";
 
 import { Badge } from "@/components/ui/badge";
 import LeadStatusSelect from "@/components/leads/LeadStatusSelect";
-import CopyPhoneButton from "@/components/leads/CopyPhoneButton";
-import { Phone, MessageCircle } from "lucide-react";
+import LeadActions from "@/components/leads/LeadActions";
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -22,7 +21,6 @@ function statusBadge(status) {
   return "bg-muted text-foreground";
 }
 
-// ✅ "new first" sorting priority
 function statusPriority(status) {
   if (status === "new") return 0;
   if (status === "contacted") return 1;
@@ -31,40 +29,18 @@ function statusPriority(status) {
   return 9;
 }
 
-// ✅ normalize phone for actions
-function digitsOnly(phone = "") {
-  return String(phone).replace(/[^\d]/g, "");
-}
-
-function makeWhatsappLink(phone) {
-  const digits = digitsOnly(phone);
-  if (!digits) return null;
-
-  // If user saved phone like 05xxxxxxxx, WhatsApp usually needs country code.
-  // We’ll make a best-effort: if it starts with "0", we drop it and add 966.
-  let normalized = digits;
-  if (normalized.startsWith("0")) normalized = "966" + normalized.slice(1);
-
-  return `https://wa.me/${normalized}`;
-}
-
-function makeTelLink(phone) {
-  const digits = digitsOnly(phone);
-  if (!digits) return null;
-  return `tel:${digits}`;
-}
-
 export default async function LeadsPage({ searchParams }) {
   await requireAgentOrAdmin();
 
   const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
   const sp = await searchParams;
-  const active = (sp?.status || "all").trim(); // all|new|contacted|closed|spam
+  const active = (sp?.status || "all").trim();
 
-  // role (subtitle only)
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -73,10 +49,10 @@ export default async function LeadsPage({ searchParams }) {
 
   const isAdmin = profile?.role === "admin";
 
-  // ✅ Leads list
   let q = supabase
     .from("leads")
-    .select(`
+    .select(
+      `
       id,
       message,
       status,
@@ -87,27 +63,27 @@ export default async function LeadsPage({ searchParams }) {
       buyer:profiles!leads_buyer_user_id_fkey (
         id, full_name, phone
       )
-    `)
+    `
+    )
     .order("created_at", { ascending: false });
 
   if (active !== "all") q = q.eq("status", active);
 
   const { data: leads, error } = await q;
 
-  // ✅ New-first sorting (especially useful on "All")
   let list = (leads || []).slice();
   list.sort((a, b) => {
     const ap = statusPriority(a.status);
     const bp = statusPriority(b.status);
     if (ap !== bp) return ap - bp;
-    // newest first as tie-breaker
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const activeCount = list.length;
 
-  // ✅ Cover thumbnails only for visible list
-  const propertyIds = [...new Set(list.map((l) => l?.property?.id).filter(Boolean))];
+  const propertyIds = [
+    ...new Set(list.map((l) => l?.property?.id).filter(Boolean)),
+  ];
   let thumbByPropertyId = {};
 
   if (propertyIds.length) {
@@ -144,10 +120,11 @@ export default async function LeadsPage({ searchParams }) {
     <Container className="py-6">
       <PageHeader
         title="Leads Inbox"
-        subtitle={isAdmin ? "All leads across the platform." : "Leads for your listings."}
+        subtitle={
+          isAdmin ? "All leads across the platform." : "Leads for your listings."
+        }
       />
 
-      {/* Tabs */}
       <div className="mt-4 flex flex-wrap gap-2">
         {tabs.map((t) => {
           const isActive = active === t.key;
@@ -189,9 +166,8 @@ export default async function LeadsPage({ searchParams }) {
             const buyer = l.buyer;
             const cover = p?.id ? thumbByPropertyId[p.id] : null;
 
+            const buyerName = buyer?.full_name || "";
             const phone = buyer?.phone || "";
-            const telHref = makeTelLink(phone);
-            const waHref = makeWhatsappLink(phone);
 
             const isNew = l.status === "new";
 
@@ -200,7 +176,6 @@ export default async function LeadsPage({ searchParams }) {
                 key={l.id}
                 className={cn(
                   "rounded-xl border bg-background overflow-hidden hover:bg-muted/30 transition",
-                  // ✅ Highlight new
                   isNew ? "ring-1 ring-primary/50 border-primary/40" : ""
                 )}
               >
@@ -242,7 +217,7 @@ export default async function LeadsPage({ searchParams }) {
                     <div className="grid gap-2 md:grid-cols-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Buyer: </span>
-                        <span className="font-medium">{buyer?.full_name || "—"}</span>
+                        <span className="font-medium">{buyerName || "—"}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Phone: </span>
@@ -256,41 +231,26 @@ export default async function LeadsPage({ searchParams }) {
                       </div>
                     </div>
 
-                    {/* ✅ Action buttons */}
-                    <div className="flex flex-wrap gap-2">
-                      {telHref ? (
-                        <a
-                          href={telHref}
-                          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-                        >
-                          <Phone className="h-4 w-4" />
-                          Call
-                        </a>
-                      ) : null}
+                    {/* ✅ Client actions: auto-set contacted on click */}
+                    <LeadActions
+                      leadId={l.id}
+                      currentStatus={l.status}
+                      phone={phone}
+                      buyerName={buyerName}
+                      propertyTitle={p?.title || ""}
+                      propertySlug={p?.slug || ""}
+                    />
 
-                      {waHref ? (
-                        <a
-                          href={waHref}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </a>
-                      ) : null}
-
-                      <CopyPhoneButton phone={phone} />
-
-                      {p?.slug ? (
+                    {p?.slug ? (
+                      <div>
                         <Link
                           href={`/property/${p.slug}`}
-                          className="rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+                          className="inline-flex rounded-lg border px-3 py-2 text-sm hover:bg-muted"
                         >
                           View property
                         </Link>
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : null}
 
                     {l.message ? (
                       <div className="text-sm text-muted-foreground rounded-lg border bg-muted/40 p-3 whitespace-pre-wrap">
