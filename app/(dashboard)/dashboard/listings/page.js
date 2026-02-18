@@ -18,20 +18,35 @@ function Field({ label, value }) {
   );
 }
 
+function AvailabilityBadge({ status }) {
+  if (!status || status === "available") return null;
+
+  return (
+    <Badge variant="outline" className="shrink-0">
+      {String(status).toUpperCase()}
+    </Badge>
+  );
+}
+
 export default async function ListingsPage() {
+  // ✅ allow agent/admin
   await requireAgentOrAdmin();
 
   const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
   const { data: listings, error } = await supabase
     .from("properties")
-    .select(`
+    .select(
+      `
       id,
       slug,
       purpose,
       property_type,
+      availability_status,
       title,
       description,
       price,
@@ -45,7 +60,8 @@ export default async function ListingsPage() {
       published_at,
       created_at,
       updated_at
-    `)
+    `
+    )
     .eq("listed_by_user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -86,9 +102,7 @@ export default async function ListingsPage() {
           }
         />
 
-        {error ? (
-          <p className="text-sm text-red-600">Error: {error.message}</p>
-        ) : null}
+        {error ? <p className="text-sm text-red-600">Error: {error.message}</p> : null}
 
         {!listings?.length ? (
           <div className="rounded-xl border bg-background p-8 text-center">
@@ -131,15 +145,19 @@ export default async function ListingsPage() {
                         </div>
                       </div>
 
-                      <Badge variant="secondary" className="border text-primary shrink-0">
-                        {p.status}
-                      </Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <AvailabilityBadge status={p.availability_status} />
+                        <Badge variant="secondary" className="border text-primary">
+                          {p.status}
+                        </Badge>
+                      </div>
                     </div>
 
                     {/* fields */}
                     <div className="grid gap-2 md:grid-cols-2">
                       <Field label="Purpose" value={p.purpose} />
                       <Field label="Type" value={p.property_type} />
+                      <Field label="Availability" value={p.availability_status || "available"} />
                       <Field label="Bedrooms" value={p.bedrooms} />
                       <Field label="Bathrooms" value={p.bathrooms} />
                       <Field label="Area (sqm)" value={p.area_sqm} />
@@ -162,7 +180,7 @@ export default async function ListingsPage() {
                         </Link>
                       </Button>
 
-                      {p.status === "published" && p.slug ? (
+                      {p.slug ? (
                         <Button asChild variant="ghost" className="gap-2">
                           <Link href={`/property/${p.slug}`}>
                             <ExternalLink className="h-4 w-4" />

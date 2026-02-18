@@ -22,6 +22,8 @@ import {
   LogOut,
   User,
   Inbox,
+  Shield,
+  CheckSquare,
 } from "lucide-react";
 
 export default function UserMenu() {
@@ -112,6 +114,7 @@ export default function UserMenu() {
     .join("");
 
   const isAgentOrAdmin = role === "agent" || role === "admin";
+  const isAdmin = role === "admin";
 
   return (
     <DropdownMenu>
@@ -154,7 +157,7 @@ export default function UserMenu() {
           </Link>
         </DropdownMenuItem>
 
-        {/* ✅ Only agent/admin */}
+        {/* ✅ Agent/Admin section */}
         {isAgentOrAdmin ? (
           <>
             <DropdownMenuSeparator />
@@ -170,6 +173,27 @@ export default function UserMenu() {
               <Link href="/dashboard/leads" className="flex items-center gap-2">
                 <Inbox className="h-4 w-4" />
                 Leads
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+
+        {/* ✅ Admin-only section */}
+        {isAdmin ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Admin
+            </DropdownMenuLabel>
+
+            <DropdownMenuItem asChild>
+              <Link
+                href="/dashboard/admin/properties?status=pending"
+                className="flex items-center gap-2"
+              >
+                <CheckSquare className="h-4 w-4" />
+                Moderate Properties
               </Link>
             </DropdownMenuItem>
           </>

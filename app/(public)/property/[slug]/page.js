@@ -6,6 +6,16 @@ import LeadForm from "@/components/property/LeadForm";
 import FavoriteButton from "@/components/property/FavoriteButton";
 import PropertyGallery from "@/components/property/PropertyGallery";
 
+function AvailabilityBadge({ status }) {
+  if (!status || status === "available") return null;
+
+  return (
+    <span className="rounded-md border px-2 py-1 text-xs font-semibold">
+      {String(status).toUpperCase()}
+    </span>
+  );
+}
+
 export default async function PropertyDetailPage({ params }) {
   const supabase = await supabaseServer();
 
@@ -20,6 +30,8 @@ export default async function PropertyDetailPage({ params }) {
     .single();
 
   if (error || !p) return notFound();
+
+  const isAvailable = (p.availability_status || "available") === "available";
 
   // ✅ Cover-first gallery (sort_order ASC)
   const { data: media } = await supabase
@@ -47,9 +59,12 @@ export default async function PropertyDetailPage({ params }) {
       {/* ✅ Title + meta */}
       <div className="mt-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
-            {p.title}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+              {p.title}
+            </h1>
+            <AvailabilityBadge status={p.availability_status} />
+          </div>
 
           <div className="mt-2 text-sm text-muted-foreground">
             {p.city || "—"}
@@ -85,7 +100,18 @@ export default async function PropertyDetailPage({ params }) {
 
       {/* ✅ Leads (login required) */}
       <div className="mt-6">
-        <LeadForm propertyId={p.id} />
+        {!isAvailable ? (
+          <div className="rounded-xl border bg-background p-4">
+            <div className="font-semibold">
+              This property is {String(p.availability_status).toUpperCase()}.
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Leads are closed for this listing.
+            </div>
+          </div>
+        ) : (
+          <LeadForm propertyId={p.id} />
+        )}
       </div>
     </Container>
   );

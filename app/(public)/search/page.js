@@ -3,6 +3,18 @@ import Container from "@/components/layout/Container";
 import { supabaseServer } from "@/lib/supabase/server";
 import FavoriteButton from "@/components/property/FavoriteButton";
 
+function AvailabilityBadge({ status }) {
+  if (!status || status === "available") return null;
+
+  const label = status.toUpperCase();
+
+  return (
+    <span className="rounded-md border px-2 py-1 text-xs font-medium">
+      {label}
+    </span>
+  );
+}
+
 export default async function SearchPage({ searchParams }) {
   const supabase = await supabaseServer();
   const sp = await searchParams;
@@ -42,7 +54,7 @@ export default async function SearchPage({ searchParams }) {
   let q = supabase
     .from("properties")
     .select(
-      "id, slug, title, price, currency, city, district, bedrooms, bathrooms, area_sqm, created_at, published_at",
+      "id, slug, title, price, currency, city, district, bedrooms, bathrooms, area_sqm, created_at, published_at, availability_status",
       { count: "exact" }
     )
     .eq("status", "published");
@@ -243,11 +255,16 @@ export default async function SearchPage({ searchParams }) {
                   <div className="p-4 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-semibold truncate">{p.title}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold truncate">{p.title}</div>
+                          <AvailabilityBadge status={p.availability_status} />
+                        </div>
+
                         <div className="text-sm text-muted-foreground mt-1">
                           {p.currency} {p.price} • {p.city || "—"}{" "}
                           {p.district ? `(${p.district})` : ""}
                         </div>
+
                         <div className="text-sm text-muted-foreground mt-1">
                           {p.bedrooms ?? "—"} Bedrooms • {p.bathrooms ?? "—"} Bathrooms •{" "}
                           {p.area_sqm ?? "—"} sqm
