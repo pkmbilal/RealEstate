@@ -6,6 +6,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Trash2 } from "lucide-react";
 
 const SNAPSHOT_FIELDS = [
   "purpose",
@@ -21,16 +22,13 @@ const SNAPSHOT_FIELDS = [
   "district",
 ];
 
-export default function AdminPropertyActions({
-  propertyId,
-  status,
-  previewHref,
-}) {
+export default function AdminPropertyActions({ propertyId, status, previewHref }) {
   const supabase = supabaseBrowser();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const approve = async () => {
     try {
@@ -67,10 +65,7 @@ export default function AdminPropertyActions({
         last_published_snapshot: snapshot,
       };
 
-      const { error } = await supabase
-        .from("properties")
-        .update(payload)
-        .eq("id", propertyId);
+      const { error } = await supabase.from("properties").update(payload).eq("id", propertyId);
 
       if (error) throw error;
 
@@ -97,10 +92,7 @@ export default function AdminPropertyActions({
         rejection_reason: reason || "Not specified",
       };
 
-      const { error } = await supabase
-        .from("properties")
-        .update(payload)
-        .eq("id", propertyId);
+      const { error } = await supabase.from("properties").update(payload).eq("id", propertyId);
 
       if (error) throw error;
 
@@ -109,6 +101,31 @@ export default function AdminPropertyActions({
       alert(e?.message || "Failed to reject property");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteListing = async () => {
+    const ok = window.confirm(
+      "Delete this listing?\n\nThis will permanently remove the listing and related rows (media, leads, favorites). This cannot be undone."
+    );
+    if (!ok) return;
+
+    try {
+      setDeleting(true);
+
+      const { error } = await supabase.rpc("delete_property", {
+        p_property_id: propertyId,
+      });
+
+      if (error) throw error;
+
+      // go back to admin list after delete
+      router.push("/dashboard/admin/properties");
+      router.refresh();
+    } catch (e) {
+      alert(e?.message || "Failed to delete property");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -141,6 +158,17 @@ export default function AdminPropertyActions({
           {String(status).toUpperCase()}
         </Button>
       )}
+
+      {/* ✅ Admin delete always available */}
+      <Button
+        variant="destructive"
+        disabled={deleting}
+        onClick={deleteListing}
+        className="w-full"
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
+        {deleting ? "Deleting..." : "Delete listing"}
+      </Button>
 
       {previewHref ? (
         <a className="text-xs underline text-muted-foreground" href={previewHref}>

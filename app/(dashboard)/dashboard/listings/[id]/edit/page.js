@@ -59,5 +59,20 @@ export default async function EditListingPage({ params }) {
   // ✅ only owner OR admin
   if (!isAdmin && listing.listed_by_user_id !== user.id) redirect("/dashboard/listings");
 
-  return <EditListing listing={listing} />;
+  // ✅ fetch media paths for storage cleanup on delete
+  const { data: media } = await supabase
+    .from("property_media")
+    .select("path")
+    .eq("property_id", listing.id);
+
+  const mediaPaths = (media || []).map((m) => m.path).filter(Boolean);
+
+  // ✅ pass helpers to client component
+  const listingWithMeta = {
+    ...listing,
+    isAdmin,
+    mediaPaths,
+  };
+
+  return <EditListing listing={listingWithMeta} />;
 }

@@ -10,6 +10,8 @@ import {
   User,
   Shield,
   CheckSquare,
+  List,
+  Users,
 } from "lucide-react";
 
 function NavItem({ href, icon: Icon, label, badge }) {
@@ -46,7 +48,7 @@ export default async function DashboardSidebar() {
     .single();
 
   const role = profile?.role || "user";
-  const isAgentOrAdmin = role === "agent" || role === "admin";
+  const isAgent = role === "agent";
   const isAdmin = role === "admin";
 
   // ✅ Optional: pending moderation count (admin only)
@@ -71,10 +73,14 @@ export default async function DashboardSidebar() {
       <nav className="grid gap-1">
         <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <NavItem href="/dashboard/profile" icon={User} label="Profile" />
-        <NavItem href="/dashboard/favorites" icon={Heart} label="Favorites" />
 
-        {/* ✅ Agent/Admin */}
-        {isAgentOrAdmin ? (
+        {/* ✅ USER-only: Favorites (Admins don't need it) */}
+        {!isAdmin ? (
+          <NavItem href="/dashboard/favorites" icon={Heart} label="Favorites" />
+        ) : null}
+
+        {/* ✅ AGENT-only */}
+        {isAgent ? (
           <>
             <div className="my-2 border-t" />
             <NavItem href="/dashboard/listings" icon={Building2} label="My Listings" />
@@ -82,7 +88,7 @@ export default async function DashboardSidebar() {
           </>
         ) : null}
 
-        {/* ✅ Admin-only */}
+        {/* ✅ ADMIN-only */}
         {isAdmin ? (
           <>
             <div className="my-2 border-t" />
@@ -91,6 +97,10 @@ export default async function DashboardSidebar() {
               <Shield className="h-4 w-4" />
               Admin
             </div>
+
+            <NavItem href="/dashboard/admin/agents" icon={Users} label="Agents" />
+
+            <NavItem href="/dashboard/admin/properties" icon={List} label="All Listings" />
 
             <NavItem
               href="/dashboard/admin/properties?status=pending"

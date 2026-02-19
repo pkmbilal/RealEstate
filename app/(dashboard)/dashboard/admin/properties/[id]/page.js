@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/requireRole";
 import { notFound } from "next/navigation";
 
+import AdminPropertyActions from "@/components/admin/AdminPropertyActions";
+
 function Row({ label, left, right }) {
   const changed = String(left ?? "") !== String(right ?? "");
   return (
@@ -56,17 +58,14 @@ export default async function AdminPropertyPreviewPage({ params }) {
   const hasSnapshot = !!p.last_published_snapshot;
   const hasPending = !!p.pending_changes && Object.keys(p.pending_changes).length > 0;
 
-  // ✅ Current = last published snapshot (if exists)
   const current = hasSnapshot ? p.last_published_snapshot : {};
-
-  // ✅ Proposed = pending changes if exists, else current row (new submissions)
   const proposedSource = hasPending ? p.pending_changes : p;
 
   const cur = (key) => (key in current ? current[key] : null);
   const prop = (key) => (key in proposedSource ? proposedSource[key] : null);
 
   return (
-    <Container className="py-6">
+    <Container className="py-6 space-y-4">
       <PageHeader
         title="Review Listing"
         subtitle={`Status: ${p.status}`}
@@ -77,8 +76,13 @@ export default async function AdminPropertyPreviewPage({ params }) {
         }
       />
 
+      {/* ✅ Required buttons: approve/reject (if pending) + delete always */}
+      <div className="flex justify-end">
+        <AdminPropertyActions propertyId={p.id} status={p.status} />
+      </div>
+
       {!hasSnapshot ? (
-        <div className="mb-4 rounded-xl border bg-background p-4 text-sm text-muted-foreground">
+        <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground">
           This listing has never been published yet, so there is no “Last published” version to compare.
         </div>
       ) : null}
@@ -92,7 +96,11 @@ export default async function AdminPropertyPreviewPage({ params }) {
         <Row label="Price" left={cur("price")} right={prop("price")} />
         <Row label="Purpose" left={cur("purpose")} right={prop("purpose")} />
         <Row label="Type" left={cur("property_type")} right={prop("property_type")} />
-        <Row label="Availability" left={cur("availability_status")} right={prop("availability_status")} />
+        <Row
+          label="Availability"
+          left={cur("availability_status")}
+          right={prop("availability_status")}
+        />
         <Row label="City" left={cur("city")} right={prop("city")} />
         <Row label="District" left={cur("district")} right={prop("district")} />
         <Row label="Bedrooms" left={cur("bedrooms")} right={prop("bedrooms")} />

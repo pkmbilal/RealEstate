@@ -20,11 +20,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+
 export default function EditListing({ listing }) {
   const router = useRouter();
   const supabase = supabaseBrowser();
 
   const status = listing?.status || "draft";
+  const isAdmin = !!listing?.isAdmin;
 
   const initial = useMemo(() => {
     return {
@@ -45,12 +59,19 @@ export default function EditListing({ listing }) {
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function setField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   const canSubmit = status === "draft" || status === "rejected";
+
+  // ✅ agent: only draft/rejected; admin: any status (RPC enforces too)
+  const canDelete = isAdmin || status === "draft" || status === "rejected";
+
+  // ✅ from SSR for storage cleanup
+  const mediaPaths = listing?.mediaPaths || [];
 
   function buildChangesPayload() {
     return {
@@ -80,8 +101,7 @@ export default function EditListing({ listing }) {
           status: "pending",
           pending_changes: changes,
           rejection_reason: null,
-          // ✅ keep published_at as-is (so listing still shows published date)
-          // published_at: listing?.published_at ?? null,
+          // ✅ keep published_at as-is
         };
 
         const { error } = await supabase
@@ -97,7 +117,6 @@ export default function EditListing({ listing }) {
       }
 
       // ✅ Draft / Pending / Rejected: update real columns directly
-      // if pending already, keep pending; else save as draft
       const nextStatus = status === "pending" ? "pending" : "draft";
 
       const payload = {
@@ -127,17 +146,18 @@ export default function EditListing({ listing }) {
       setSubmitting(true);
 
       if (!form.title?.trim()) throw new Error("Title is required");
-      if (!form.price || Number(form.price) <= 0) throw new Error("Valid price is required");
+      if (!form.price || Number(form.price) <= 0)
+        throw new Error("Valid price is required");
       if (!form.city?.trim()) throw new Error("City is required");
 
       const changes = buildChangesPayload();
 
-      // ✅ submit draft/rejected/pending as pending for admin review
+      // ✅ submit draft/rejected as pending for admin review
       const payload = {
         ...changes,
         status: "pending",
         rejection_reason: null,
-        pending_changes: null, // because changes are already applied to main columns
+        pending_changes: null, // changes are already applied to main columns
       };
 
       const { error } = await supabase
@@ -153,6 +173,37 @@ export default function EditListing({ listing }) {
       toast.error(e?.message || "Failed to submit");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function deleteListing() {
+    try {
+      setDeleting(true);
+
+      // ✅ optional storage cleanup
+      if (mediaPaths.length) {
+        const { error: storageErr } = await supabase.storage
+          .from("property-media")
+          .remove(mediaPaths);
+
+        // don't block deletion on storage failure
+        if (storageErr) console.warn("Storage cleanup failed:", storageErr.message);
+      }
+
+      // ✅ authoritative delete (permissions enforced in SQL)
+      const { error } = await supabase.rpc("delete_property", {
+        p_property_id: listing.id,
+      });
+
+      if (error) throw error;
+
+      toast.success("Listing deleted ✅");
+      router.push("/dashboard/listings");
+      router.refresh();
+    } catch (e) {
+      toast.error(e?.message || "Failed to delete listing");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -180,6 +231,38 @@ export default function EditListing({ listing }) {
                 {submitting ? "Submitting..." : "Submit for approval"}
               </Button>
             ) : null}
+
+            {canDelete ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deleting}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deleting ? "Deleting..." : "Delete"}
+                  </Button>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove the listing and related data (media, leads,
+                      favorites). This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={deleteListing}
+                      disabled={deleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Confirm delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
           </div>
         }
       />
@@ -205,7 +288,10 @@ export default function EditListing({ listing }) {
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Purpose</Label>
-                <Select value={form.purpose} onValueChange={(v) => setField("purpose", v)}>
+                <Select
+                  value={form.purpose}
+                  onValueChange={(v) => setField("purpose", v)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -314,7 +400,10 @@ export default function EditListing({ listing }) {
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>City</Label>
-                <Input value={form.city} onChange={(e) => setField("city", e.target.value)} />
+                <Input
+                  value={form.city}
+                  onChange={(e) => setField("city", e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>District</Label>
